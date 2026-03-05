@@ -46,6 +46,7 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s ease;
+            touch-action: manipulation;
         }
 
         /* UTILITIES */
@@ -57,6 +58,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            height: 100dvh;
         }
         
         .btn {
@@ -96,7 +98,7 @@
             flex-wrap: wrap; 
             justify-content: center;
             gap: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             width: 100%;
         }
         
@@ -130,17 +132,20 @@
         .card {
             background: var(--bg-card);
             border-radius: var(--radius);
-            padding: 30px;
+            padding: 20px;
             box-shadow: var(--shadow);
             text-align: center;
             position: relative;
             border: 1px solid var(--border);
-            flex-shrink: 0; 
-            margin: auto 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-shrink: 1; 
         }
 
         .progress-container {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .progress-header {
             display: flex;
@@ -186,13 +191,13 @@
         }
 
         /* QUESTION AREA */
-        .question-area { margin: 25px 0; }
+        .question-area { margin: 15px 0; }
         .question-text {
-            font-size: 4rem;
+            font-size: 3.5rem;
             font-weight: 800;
             color: var(--text-main);
             line-height: 1;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .sub-text {
             color: var(--text-muted);
@@ -206,7 +211,7 @@
             max-width: 200px;
             margin: 0 auto;
         }
-        input[type="number"] {
+        #answerInput {
             width: 100%;
             background: var(--bg-input);
             border: 2px solid transparent;
@@ -214,28 +219,65 @@
             font-size: 2rem;
             font-weight: 700;
             text-align: center;
-            padding: 15px;
+            padding: 12px;
             border-radius: var(--radius);
             outline: none;
             transition: var(--transition);
-            -moz-appearance: textfield;
         }
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        input:focus {
-            border-color: var(--primary);
-            background: var(--bg-card);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
-        }
-        
-        input.error {
+        #answerInput.error {
             border-color: var(--error);
             animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            color: var(--error);
         }
-        input.success {
+        #answerInput.success {
             border-color: var(--success);
             color: var(--success);
+        }
+
+        /* KEYPAD */
+        #keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: auto;
+            width: 100%;
+            padding-bottom: 10px;
+        }
+        #keypad.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .key-btn {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            font-size: 1.5rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 15px 0;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            user-select: none;
+        }
+        .key-btn:active, .key-btn.active-visual {
+            transform: scale(0.95);
+            background-color: var(--bg-input);
+        }
+        .key-action {
+            background-color: var(--bg-input);
+            color: var(--error);
+            font-size: 1.2rem;
+        }
+        .key-enter {
+            background: var(--primary);
+            color: white;
+            grid-column: span 3;
+            padding: 18px 0;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        .key-enter:hover {
+            background: var(--primary-hover);
         }
 
         /* ANIMATIONS */
@@ -330,11 +372,11 @@
 
         /* RESPONSIVE DESIGN */
         @media (max-height: 600px) {
-            .card { padding: 15px; margin: 0; }
-            .question-area { margin: 15px 0; }
+            .card { padding: 10px 15px; margin-bottom: 10px; }
             .question-text { font-size: 3rem; }
-            input[type="number"] { font-size: 1.5rem; padding: 10px; }
-            .enter-hint { display: none; }
+            #answerInput { font-size: 1.5rem; padding: 8px; }
+            .key-btn { padding: 10px 0; font-size: 1.2rem; }
+            .key-enter { padding: 12px 0; }
         }
 
         @media (max-width: 400px) {
@@ -384,13 +426,27 @@
         </div>
 
         <div class="input-wrapper">
-            <input type="number" id="answerInput" placeholder="?" autocomplete="off" inputmode="numeric">
-        </div>
-
-        <div class="enter-hint" style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted);">
-            Press <strong>Enter</strong> to submit
+            <!-- Swapped to readonly text input to disable native mobile keyboards -->
+            <input type="text" id="answerInput" placeholder="?" readonly>
         </div>
     </main>
+
+    <!-- Built-in Keypad -->
+    <div id="keypad">
+        <button class="key-btn" data-val="1">1</button>
+        <button class="key-btn" data-val="2">2</button>
+        <button class="key-btn" data-val="3">3</button>
+        <button class="key-btn" data-val="4">4</button>
+        <button class="key-btn" data-val="5">5</button>
+        <button class="key-btn" data-val="6">6</button>
+        <button class="key-btn" data-val="7">7</button>
+        <button class="key-btn" data-val="8">8</button>
+        <button class="key-btn" data-val="9">9</button>
+        <div></div> <!-- Empty space to center 0 -->
+        <button class="key-btn" data-val="0">0</button>
+        <button class="key-btn key-action" id="keyDel">DEL</button>
+        <button class="key-btn key-enter" id="keyEnter">ENTER</button>
+    </div>
 </div>
 
 <!-- Toast Notification -->
@@ -469,6 +525,10 @@
     let currentQuestion = null;
     let pendingLevelUnlock = null;
     let initialQueueSize = 0; 
+    
+    // Keypad and Input state
+    let inputVal = "";
+    let isProcessing = false; // Prevents the rapid-enter skip bug
 
     function init() {
         loadState();
@@ -596,16 +656,41 @@
         }
     }
 
+    // Keypad Logic
+    function handleKeypadInput(val) {
+        if(inputVal.length < 3) { // Max answers are up to 100 (3 digits)
+            inputVal += val;
+            updateInputDisplay();
+        }
+    }
+
+    function deleteInput() {
+        if(inputVal.length > 0) {
+            inputVal = inputVal.slice(0, -1);
+            updateInputDisplay();
+        }
+    }
+
+    function updateInputDisplay() {
+        document.getElementById('answerInput').value = inputVal;
+    }
+
     function checkAnswer() {
-        const input = document.getElementById('answerInput');
-        const val = parseInt(input.value);
+        if (isProcessing) return; // Prevent multiple requests/submissions logic bug
+
+        const val = parseInt(inputVal);
         if (isNaN(val)) return; 
 
+        isProcessing = true;
+        document.getElementById('keypad').classList.add('disabled');
+
+        const inputEl = document.getElementById('answerInput');
         const correct = currentQuestion.n1 * currentQuestion.n2;
+        
         if (val === correct) {
-            handleSuccess(input);
+            handleSuccess(inputEl);
         } else {
-            handleError(input, correct);
+            handleError(inputEl, correct);
         }
     }
 
@@ -622,8 +707,11 @@
 
         setTimeout(() => {
             inputEl.classList.remove('success');
-            inputEl.value = '';
+            inputVal = '';
+            updateInputDisplay();
             document.getElementById('feedbackMsg').innerHTML = '&nbsp;';
+            isProcessing = false;
+            document.getElementById('keypad').classList.remove('disabled');
             nextQuestion();
         }, 600);
     }
@@ -646,12 +734,15 @@
 
         setTimeout(() => {
             inputEl.classList.remove('error');
-            inputEl.value = '';
+            inputVal = '';
+            updateInputDisplay();
             setTimeout(() => {
                 document.getElementById('feedbackMsg').innerHTML = '&nbsp;';
+                isProcessing = false;
+                document.getElementById('keypad').classList.remove('disabled');
                 nextQuestion();
             }, 1000);
-        }, 1000);
+        }, 1000); // Wait 1 second on error state, then clear and wait another 1 second
     }
 
     function renderUI() {
@@ -687,7 +778,6 @@
         setTimeout(() => {
             el.textContent = qText;
             el.style.opacity = 1;
-            document.getElementById('answerInput').focus();
         }, 100);
     }
 
@@ -744,31 +834,58 @@
     }
 
     function setupEventListeners() {
-        const input = document.getElementById('answerInput');
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') checkAnswer();
+        // Virtual Keypad Mapping
+        document.querySelectorAll(".key-btn[data-val]").forEach(btn => {
+            btn.addEventListener("click", () => handleKeypadInput(btn.getAttribute("data-val")));
         });
-        
-        document.addEventListener('click', (e) => {
-            // Auto focus for non-touch to preserve quick flow, skipped on small screens to prevent annoying popups
-            if (window.innerWidth > 600) {
-                if (!e.target.closest('button') && !e.target.closest('.modal') && !e.target.closest('input')) {
-                    input.focus();
+        document.getElementById("keyDel").addEventListener("click", deleteInput);
+        document.getElementById("keyEnter").addEventListener("click", checkAnswer);
+
+        // Physical Keyboard Support mapping to Keypad behavior
+        document.addEventListener('keydown', (e) => {
+            // Let the user type in text fields (like the passcode modal) normally
+            if (e.target.tagName === 'INPUT' && e.target.id !== 'answerInput') {
+                return;
+            }
+            
+            // Check for modal interactions
+            if (document.getElementById('levelCompleteModal').classList.contains('open')) {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('nextLevelBtn').click();
                 }
+                return;
+            }
+
+            // Block input globally while evaluating the answer transition
+            if (isProcessing) return;
+
+            if (e.key >= '0' && e.key <= '9') {
+                handleKeypadInput(e.key);
+                triggerKeyVisual(e.key);
+            } else if (e.key === 'Backspace') {
+                deleteInput();
+                triggerKeyVisual('Backspace');
+            } else if (e.key === 'Enter') {
+                checkAnswer();
+                triggerKeyVisual('Enter');
             }
         });
 
+        // Theme
         document.getElementById('themeToggle').addEventListener('click', () => {
             state.theme = state.theme === 'dark' ? 'light' : 'dark';
             saveState();
             applyTheme();
         });
 
+        // Stats
         document.getElementById('statsBtn').addEventListener('click', openStats);
         document.getElementById('closeStats').addEventListener('click', () => {
             document.getElementById('statsModal').classList.remove('open');
         });
 
+        // Reset
         document.getElementById('resetBtn').addEventListener('click', resetApp);
 
         // Unlock Modal Listeners
@@ -814,6 +931,19 @@
                 loadLevel(state.currentLevelId + 1);
             }
         });
+    }
+    
+    // Simulate Key Presses Visually
+    function triggerKeyVisual(val) {
+        let btn;
+        if (val === 'Backspace') btn = document.getElementById('keyDel');
+        else if (val === 'Enter') btn = document.getElementById('keyEnter');
+        else btn = document.querySelector(`.key-btn[data-val="${val}"]`);
+        
+        if(btn) {
+            btn.classList.add('active-visual');
+            setTimeout(() => btn.classList.remove('active-visual'), 100);
+        }
     }
 
     function openStats() {
