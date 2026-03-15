@@ -793,7 +793,7 @@
         
         // Timer Mechanics (> 12 seconds acts as a slow/wrong penalty on weight)
         const timeTaken = Date.now() - currentQuestionStartTime;
-        const isSlow = timeTaken > 20000; 
+        const isSlow = timeTaken > 12000; 
         const isCorrect = (val === correct);
 
         // Weight Updating
