@@ -410,6 +410,12 @@
     <header>
         <div class="logo">X Mastery</div>
         <div class="header-controls">
+            <!-- Fast Mode Toggle -->
+            <button class="btn btn-ghost btn-icon" id="fastModeToggle" title="Toggle Fast Mode">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </button>
             <button class="btn btn-ghost btn-icon" id="themeToggle" title="Toggle Theme">
                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -430,7 +436,10 @@
     <main class="card">
         <div class="progress-container">
             <div class="progress-header">
-                <span class="level-title" id="levelLabel">Level 1</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="level-title" id="levelLabel">Level 1</span>
+                    <button class="btn btn-danger" id="relockBtn" style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px;" title="Re-lock this level">Re-lock</button>
+                </div>
                 <span class="phase-badge sequential" id="phaseBadge">Sequential</span>
             </div>
             <div class="progress-bar">
@@ -524,19 +533,19 @@
         { id: 2, name: "Level 2", tables: [4, 5], lower:[], label: "4 & 5", type: "standard" },
         { id: 3, name: "Level 3", tables: [6], lower: [2,3,4,5], label: "Table 6", type: "super" },
         { id: 4, name: "Level 4", tables: [7], lower: [2,3,4,5,6], label: "Table 7", type: "super" },
-        { id: 5, name: "Level 5", tables: [2,3,4,5,6,7], lower:[], label: "Mix 2-7", type: "review" },
-        { id: 6, name: "Level 6", tables: [8], lower: [2,3,4,5,6,7], label: "Table 8", type: "super" },
-        { id: 7, name: "Level 7", tables: [9], lower: [2,3,4,5,6,7,8], label: "Table 9", type: "super" },
-        { id: 8, name: "Level 8", tables: [2,3,4,5,6,7,8,9], lower:[], label: "Mix 2-9", type: "review" }
+        { id: 5, name: "Level 5", tables:[2,3,4,5,6,7], lower:[], label: "Mix 2-7", type: "review" },
+        { id: 6, name: "Level 6", tables: [8], lower:[2,3,4,5,6,7], label: "Table 8", type: "super" },
+        { id: 7, name: "Level 7", tables: [9], lower:[2,3,4,5,6,7,8], label: "Table 9", type: "super" },
+        { id: 8, name: "Level 8", tables:[2,3,4,5,6,7,8,9], lower:[], label: "Mix 2-9", type: "review" }
     ];
 
-    // Using v5 to bypass legacy configurations cleanly
     const STORAGE_KEY = 'math_mastery_v5'; 
 
     let state = {
         currentLevelId: 1,
         unlockedMax: 1,
         theme: 'dark',
+        fastMode: false,
         mastery: {}, 
         levelData: {},
         weights: {} // Tracks dynamically weighted items based on wrong/slow responses
@@ -549,6 +558,7 @@
     let pendingLevelUnlock = null;
     let initialQueueSize = 0; 
     let currentQuestionStartTime = 0;
+    let isFirstQuestion = true; 
     
     // Keypad and Input state
     let inputVal = "";
@@ -557,7 +567,9 @@
     function init() {
         loadState();
         if(!state.weights) state.weights = {};
+        if(typeof state.fastMode === 'undefined') state.fastMode = false;
         applyTheme();
+        applyFastMode();
         setupEventListeners();
         loadLevel(state.currentLevelId);
     }
@@ -594,6 +606,9 @@
             state.levelData[levelId] = { phase: 0, masteryDone: false };
         }
 
+        // Pause timer on newly generated sequence
+        isFirstQuestion = true;
+
         generateQueue(levelConfig);
         nextQuestion();
         renderUI();
@@ -601,7 +616,7 @@
 
     // Custom helper for fetching dynamically weighted items
     function getWeightedQuestions(tables, count) {
-        let res = [];
+        let res =[];
         let pool =[];
         
         tables.forEach(t => {
@@ -631,7 +646,7 @@
 
     function generateQueue(levelConfig) {
         currentQueue =[];
-        retryQueue = []; 
+        retryQueue =[]; 
         
         const phase = state.levelData[levelConfig.id].phase || 0;
         const rSign = () => Math.random() < 0.5 ? 1 : -1;
@@ -661,14 +676,11 @@
                 // Phase 1: Mastery Random Weights (10 total)
                 currentQueue = getWeightedQuestions(levelConfig.tables, 10);
             } else {
-                // Phase 2: Super Mastery (10 shuffled originals + 10 mixed from lower levels = 40 total per the prompt specification for a specific mixture logic)
-                // Note: The prompt explicitly asked for 10 sequential, 10 random, and 20 super mastery (10 table-specific shuffled with 10 random lower level items).
+                // Phase 2: Super Mastery 
                 let q =[];
-                // Generate 10 table specific
                 levelConfig.tables.forEach(t => {
                     for(let i = 1; i <= 10; i++) q.push({ n1: t * rSign(), n2: i * rSign(), baseT: t, baseM: i });
                 });
-                // Get 10 randomly weighted lower questions
                 q = q.concat(getWeightedQuestions(levelConfig.lower, 10));
                 
                 // Shuffle array
@@ -677,7 +689,7 @@
             }
         } 
         else if (levelConfig.type === "review") {
-            // Level 5 and 8 Review levels: just purely 40 randomized weighted items.
+            // Level 5 and 8 Review levels
             currentQueue = getWeightedQuestions(levelConfig.tables, 40);
         }
         
@@ -791,9 +803,17 @@
         const inputEl = document.getElementById('answerInput');
         const correct = currentQuestion.n1 * currentQuestion.n2;
         
-        // Timer Mechanics (> 12 seconds acts as a slow/wrong penalty on weight)
+        // Timer Mechanics 
         const timeTaken = Date.now() - currentQuestionStartTime;
-        const isSlow = timeTaken > 12000; 
+        const timeLimit = state.fastMode ? 3000 : 12000;
+        let isSlow = timeTaken > timeLimit; 
+
+        // Nullify timer penalty on the first question upon loading phase/level/app
+        if (isFirstQuestion) {
+            isSlow = false;
+            isFirstQuestion = false;
+        }
+
         const isCorrect = (val === correct);
 
         // Weight Updating
@@ -921,7 +941,7 @@
     function renderQuestion() {
         if(!currentQuestion) return;
         
-        // Reset Time for the 12-second invisible countdown metric
+        // Reset Time for the invisible countdown metric
         currentQuestionStartTime = Date.now();
 
         const formatNum = (n, isSecond) => (isSecond && n < 0) ? `(${n})` : n;
@@ -986,6 +1006,19 @@
         document.body.setAttribute('data-theme', state.theme);
     }
 
+    function applyFastMode() {
+        const btn = document.getElementById('fastModeToggle');
+        if (state.fastMode) {
+            btn.style.color = "var(--warning)";
+            btn.style.borderColor = "var(--warning)";
+            btn.style.background = "rgba(245, 158, 11, 0.1)";
+        } else {
+            btn.style.color = "";
+            btn.style.borderColor = "";
+            btn.style.background = "";
+        }
+    }
+
     function setupEventListeners() {
         document.querySelectorAll(".key-btn[data-val]").forEach(btn => {
             btn.addEventListener("click", () => handleKeypadInput(btn.getAttribute("data-val")));
@@ -1021,11 +1054,45 @@
             }
         });
 
-        // Theme
+        // Theme Toggle
         document.getElementById('themeToggle').addEventListener('click', () => {
             state.theme = state.theme === 'dark' ? 'light' : 'dark';
             saveState();
             applyTheme();
+        });
+
+        // Fast Mode Toggle
+        document.getElementById('fastModeToggle').addEventListener('click', () => {
+            state.fastMode = !state.fastMode;
+            saveState();
+            applyFastMode();
+            showToast(state.fastMode ? "Fast Mode Enabled (3s)" : "Normal Mode Reverted (12s)");
+        });
+
+        // Level Re-lock
+        document.getElementById('relockBtn').addEventListener('click', () => {
+            if (confirm("Are you sure you want to re-lock this level? Higher levels will also be locked, and the previous level's progress will be reset.")) {
+                const targetLevel = state.currentLevelId;
+                
+                let newUnlockedMax = Math.max(1, targetLevel - 1);
+                state.unlockedMax = newUnlockedMax;
+                
+                // Clear progress for current and all higher levels
+                for(let i = targetLevel; i <= LEVELS.length; i++) {
+                    state.levelData[i] = { phase: 0, masteryDone: false };
+                }
+                
+                // Reset progress of the 1 previous level (or level 1 if on level 1)
+                if (targetLevel > 1) {
+                    state.levelData[targetLevel - 1] = { phase: 0, masteryDone: false };
+                } else {
+                    state.levelData[1] = { phase: 0, masteryDone: false };
+                }
+                
+                saveState();
+                loadLevel(newUnlockedMax);
+                showToast("Level re-locked and previous progress reset.");
+            }
         });
 
         // Stats
